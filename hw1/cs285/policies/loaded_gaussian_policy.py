@@ -29,6 +29,10 @@ class LoadedGaussianPolicy(BasePolicy, nn.Module):
     def __init__(self, filename, **kwargs):
         super().__init__(**kwargs)
 
+        # print current directory
+        import os
+        print(filename)
+        print()
         with open(filename, 'rb') as f:
             data = pickle.loads(f.read())
 
