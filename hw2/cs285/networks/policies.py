@@ -59,9 +59,16 @@ class MLPPolicy(nn.Module):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         """Takes a single observation (as a numpy array) and returns a single action (as a numpy array)."""
         # TODO: implement get_action
-        action = None
+        if len(obs.shape) <= 1:
+            obs = obs[None]
 
-        return action
+        obs = ptu.from_numpy(obs)
+        if self.discrete:
+            action = self(obs).sample()
+        else:
+            action = self(obs).rsample()
+
+        return ptu.to_numpy(action[0])
 
     def forward(self, obs: torch.FloatTensor):
         """
@@ -71,11 +78,26 @@ class MLPPolicy(nn.Module):
         """
         if self.discrete:
             # TODO: define the forward pass for a policy with a discrete action space.
-            pass
+            return distributions.Categorical(logits=self.logits_net(obs))
         else:
             # TODO: define the forward pass for a policy with a continuous action space.
-            pass
-        return None
+
+            if self.discrete:
+                act_dist = distributions.Categorical(logits=self.logits_net(obs))
+            else:
+                mean = self.mean_net(obs)
+                std = self.logstd
+                e_std = torch.exp(std)
+                act_dist = torch.distributions.Normal(mean, e_std)
+
+            return act_dist
+
+            # batch_mean = self.mean_net(obs)
+            # scale_tril = torch.diag(torch.exp(self.logstd))
+            # batch_scale_tril = scale_tril.repeat(batch_mean.shape[0], 1, 1)
+            # return distributions.MultivariateNormal(
+            #     loc=batch_mean,
+            #     scale_tril=batch_scale_tril)
 
     def update(self, obs: np.ndarray, actions: np.ndarray, *args, **kwargs) -> dict:
         """Performs one iteration of gradient descent on the provided batch of data."""
@@ -97,8 +119,19 @@ class MLPPolicyPG(MLPPolicy):
         advantages = ptu.from_numpy(advantages)
 
         # TODO: implement the policy gradient actor update.
-        loss = None
+        # loss = None
+        actions_distribution = self.forward(obs)
+        log_probs: torch.Tensor = actions_distribution.log_prob(actions)
+        if not self.discrete:
+            log_probs = log_probs.sum(1)
+        assert log_probs.size() == advantages.size()
+        loss = -(log_probs * advantages).sum()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
         return {
             "Actor Loss": ptu.to_numpy(loss),
         }
+
