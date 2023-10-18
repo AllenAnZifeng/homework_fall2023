@@ -203,7 +203,7 @@ class SoftActorCritic(nn.Module):
             next_qs = self.q_backup_strategy(next_qs)
 
             # Compute the target Q-value
-            target_values: torch.Tensor = reward + self.discount * (1 - done.float()) * next_qs
+            target_values: torch.Tensor = reward[None] + self.discount * (1 - done.float()[None]) * next_qs
 
 
 
@@ -243,7 +243,7 @@ class SoftActorCritic(nn.Module):
 
         # TODO(student): Compute the entropy of the action distribution.
         # Note: Think about whether to use .rsample() or .sample() here...
-        return  -action_distribution.log_prob(action_distribution.sample())
+        return  -action_distribution.log_prob(action_distribution.rsample())
 
 
     def actor_loss_reinforce(self, obs: torch.Tensor):
@@ -264,8 +264,8 @@ class SoftActorCritic(nn.Module):
 
             # TODO(student): Compute Q-values for the current state-action pair
 
-            q_values = self.critic(obs.repeat(self.num_actor_samples, 1, 1), action)
-
+            # q_values = self.critic(obs.repeat(self.num_actor_samples, 1, 1), action)
+            q_values = torch.stack([self.critic(obs,a) for a in action],dim=1)
 
             assert q_values.shape == (
                 self.num_critic_networks,
@@ -296,11 +296,11 @@ class SoftActorCritic(nn.Module):
 
         # TODO(student): Compute Q-values for the sampled state-action pair
         # q_values = self.critic(obs, action)
-        q_values = self.critic(obs, action).mean(dim=0)
+        q_values = self.critic(obs, action)
 
         # TODO(student): Compute the actor loss
         # loss = -q_values.mean()
-        loss = -(q_values - self.temperature * action_distribution.log_prob(action)).mean()
+        loss = -torch.mean(q_values)
 
         return loss, torch.mean(self.entropy(action_distribution))
 
@@ -355,7 +355,8 @@ class SoftActorCritic(nn.Module):
             critic_info = self.update_critic(observations, actions, rewards, next_observations, dones)
             critic_infos.append(critic_info)
         # TODO(student): Update the actor
-        actor_info =  self.update_actor(observations)
+        # actor_info = {}
+        actor_info = self.update_actor(observations)
 
         # TODO(student): Perform either hard or soft target updates.
         # Relevant variables:
