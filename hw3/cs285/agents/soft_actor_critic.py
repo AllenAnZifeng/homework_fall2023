@@ -181,11 +181,7 @@ class SoftActorCritic(nn.Module):
         """
         (batch_size,) = reward.shape
 
-        obs = ptu.from_numpy(obs)
-        action = ptu.from_numpy(action)
-        reward = ptu.from_numpy(reward)
-        next_obs = ptu.from_numpy(next_obs)
-        done = ptu.from_numpy(done)
+
 
         # Compute target values
         # Important: we don't need gradients for target values!
@@ -250,7 +246,7 @@ class SoftActorCritic(nn.Module):
         batch_size = obs.shape[0]
 
         # TODO(student): Generate an action distribution
-        obs = ptu.from_numpy(obs)
+
         action_distribution: torch.distributions.Distribution = self.actor(obs)
 
         with torch.no_grad():
