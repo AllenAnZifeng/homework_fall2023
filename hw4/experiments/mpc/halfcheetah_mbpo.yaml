@@ -1,5 +1,5 @@
 env_name: cheetah-cs285-v0
-exp_name: cheetah_mbpo
+exp_name: cheetah_mbpo_length0
 
 base_config: mpc
 num_layers: 2

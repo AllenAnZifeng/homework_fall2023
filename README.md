@@ -1,2 +1,1 @@
-
-tensorboard --logdir=hw3/data
+tensorboard --logdir=hw4/data
